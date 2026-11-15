@@ -24,10 +24,20 @@ This web app puts both records on the same scale (VIIRS-equivalent hotspots) for
    - MODIS Collection 6.1 active fires, Terra + Aqua (Nov 2000 – Dec 2025)
    - VIIRS 375 m active fires, NOAA-20 (2018 – 2025). NOAA-20 is used as the reference because Suomi NPP data delivery ended in Nov 2026.
 2. Aggregation: counts per 0.25° cell, month, sensor and day/night pass.
-3. Harmonization: for each calendar month *m* and pass *d* (day/night), factor *k[m,d]* = Σ VIIRS / Σ MODIS over the overlap years 2018–2025. Before 2018, VIIRS-equivalent hotspots = *k* × MODIS; from 2018 on, observed VIIRS counts are used.
-4. Validation: 2023 is held out, factors are fitted on the other overlap years, 2023 is predicted from MODIS and compared with real VIIRS (region monthly totals and cell-level correlations). Three variants are compared (single ratio, monthly ratio Terra+Aqua, monthly ratio Aqua only); the best is used.
+3. Harmonization: for each calendar month *m* and pass *d* (day/night), factor *k[m,d]* = Σ VIIRS / Σ MODIS over the overlap years 2018–2025. Before 2018, VIIRS-equivalent hotspots = *k* × MODIS; from 2018 on, observed VIIRS counts are used. Aqua started in July 2002; before that only Terra was in orbit, so Terra-only factors are used for Nov 2000 – Jun 2002.
+4. Validation: 2023 is held out, factors are fitted on the other overlap years, 2023 is predicted from MODIS and compared with real VIIRS (region monthly totals and cell-level correlations). Variants compared: single ratio, monthly ratio Terra+Aqua, monthly ratio Aqua only (best: monthly ratio Terra+Aqua), plus the Terra-only factors.
 
-Scripts: `scripts/loader.js` (in-browser loader that streams the FIRMS CSVs and aggregates them), `scripts/build.py` (harmonization, validation and `data.json`).
+## Results (2,923,371 detections, hold-out year 2023)
+| model | yearly error | monthly WAPE | r cell × month | r cell, yearly |
+|---|---|---|---|---|
+| single ratio (day/night), Terra+Aqua | −4.4% | 7.9% | 0.96 | 0.98 |
+| **monthly ratio (day/night), Terra+Aqua (used)** | **−0.2%** | **3.1%** | **0.96** | **0.98** |
+| monthly ratio (day/night), Aqua only | −0.1% | 4.5% | 0.94 | 0.97 |
+| monthly ratio (day/night), Terra only (used before Jul 2002) | +0.8% | 7.8% | 0.89 | 0.91 |
+
+Without harmonization, MODIS counts underestimate VIIRS by 74% for 2023. Orbit-drift check: fitting the factors with 2018–2019 only (before Terra/Aqua drift) changes the pre-2018 VIIRS-equivalent totals by about −0.5% (Terra-only: −0.4%). Full report: `scripts/report.md`.
+
+Raw aggregated input: `data_raw/fogo_alerta_dados.json.gz`. Scripts: `scripts/loader.js` (in-browser loader that streams the FIRMS CSVs and aggregates them), `scripts/build.py` (harmonization, validation and `data.json`).
 
 ## Limits
 Hotspots are fire pixels, not individual fires or burned area. Clouds and smoke hide fires. One region-wide factor per month and pass. MODIS orbit drift after 2020 is checked through the yearly ratio. 2026 standard-processing data were not yet available.

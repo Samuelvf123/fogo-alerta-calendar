@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
-src = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "work" / "fogo_alerta_dados.json.gz"
+src = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "data_raw" / "fogo_alerta_dados.json.gz"
 raw = json.loads(gzip.open(src, "rt", encoding="utf-8").read())
 G = raw["grid"]
 NJ = round((G["lonMax"] - G["lonMin"]) / G["res"])
@@ -123,6 +123,13 @@ for r in results:
           f"r_month={r['r_monthly']:.3f} r_cell_month={r['r_cell_month']:.3f} r_cell_year={r['r_cell_year']:.3f} naive_err={r['naive_error']:+.1%}")
 
 best = min(results, key=lambda r: r["wape_monthly"])
+# Terra-only factors: used for the months before Aqua started (Nov 2000 - Jun 2002)
+kT_train = fit_factors(train, ("T",))
+terra_eval = evaluate(kT_train, ("T",), "monthly ratio (day/night), Terra only - used before Aqua")
+print(f"{terra_eval['label']:45s} annual_err={terra_eval['annual_error']:+.1%} WAPE={terra_eval['wape_monthly']:.1%} r_cell_year={terra_eval['r_cell_year']:.3f}")
+aqua_first = df[df.s == "A"].groupby("ym").n.sum()
+aqua_start = min(aqua_first[aqua_first > 0].index)
+print("Aqua first month:", aqua_start)
 print("best:", best["label"])
 best_sensors = ("A",) if "Aqua only" in best["label"] else ("A", "T")
 
@@ -132,7 +139,7 @@ for y in OVERLAP:
     s_ = df[df.year == y]
     v = s_[s_.s == "V"].n.sum()
     m = s_[s_.s.isin(best_sensors)].n.sum()
-    stab.append({"year": y, "viirs": int(v), "modis": int(m), "ratio": round(v / m, 2) if m else None})
+    stab.append({"year": y, "viirs": int(v), "modis": int(m), "ratio": round(float(v / m), 2) if m else None})
 print("ratio by year:", [(x["year"], x["ratio"]) for x in stab])
 
 # final factors on all overlap years
@@ -145,6 +152,15 @@ if "global" in best["label"]:
             kf[(mo, d)] = float(r_)
 else:
     kf = fit_factors(OVERLAP, best_sensors)
+kT = fit_factors(OVERLAP, ("T",))
+
+# sensitivity: factors from 2018-2019 only (before the MODIS orbit drift) vs all overlap years
+k_early = fit_factors([2018, 2019], best_sensors)
+pre = df[(df.year < 2018) & df.s.isin(best_sensors)].groupby(["moy", "d"]).n.sum()
+tot_all = sum(pre[(mo, d)] * kf[(mo, d)] for (mo, d) in pre.index)
+tot_early = sum(pre[(mo, d)] * k_early[(mo, d)] for (mo, d) in pre.index)
+sens_early = float(tot_early / tot_all - 1)
+print(f"sensitivity (2018-2019 factors vs all): {sens_early:+.1%} on pre-2018 totals")
 
 # ---------- site data ----------
 months = pd.period_range("2000-11", "2025-12", freq="M")
@@ -171,29 +187,34 @@ out = {
     "viirs_start": "2018-01",
     "modis_sensors": "Terra+Aqua" if len(best_sensors) == 2 else "Aqua",
     "factors": {f"{mo:02d}{d}": round(kf[(mo, d)], 4) for mo in range(1, 13) for d in "DN"},
+    "factors_terra": {f"{mo:02d}{d}": round(kT[(mo, d)], 4) for mo in range(1, 13) for d in "DN"},
+    "aqua_start": aqua_start,
     "validation": {
         "holdout_year": HOLDOUT,
-        "models": [{k: (round(v, 4) if isinstance(v, float) else v) for k, v in r.items() if k != "monthly"} for r in results],
+        "models": [{k: (round(v, 4) if isinstance(v, float) else v) for k, v in r.items() if k != "monthly"} for r in results + [terra_eval]],
         "chosen": best["label"],
         "monthly": [{"moy": int(x["moy"]), "obs": int(x["obs"]), "pred": round(float(x["pred"]), 1)} for x in validation_monthly],
         "ratio_by_year": stab,
+        "sensitivity_early": round(sens_early, 4),
+        "detections": int(df.n.sum()),
     },
     "cells": cells,
 }
-(ROOT / "site").mkdir(exist_ok=True)
+pass
 js = json.dumps(out, separators=(",", ":"))
-(ROOT / "site" / "data.json").write_text(js)
+(ROOT / "data.json").write_text(js)
 print("data.json", round(len(js) / 1e6, 2), "MB; cells", len(cells))
 
 # report
 lines = ["# Validation report", "", f"Hold-out year: {HOLDOUT}; overlap years: {OVERLAP[0]}-{OVERLAP[-1]}", ""]
 lines.append("| model | annual error | monthly WAPE | r (region, monthly) | r (cell x month) | r (cell, annual) | naive error |")
 lines.append("|---|---|---|---|---|---|---|")
-for r in results:
+for r in results + [terra_eval]:
     lines.append(f"| {r['label']} | {r['annual_error']:+.1%} | {r['wape_monthly']:.1%} | {r['r_monthly']:.3f} | {r['r_cell_month']:.3f} | {r['r_cell_year']:.3f} | {r['naive_error']:+.1%} |")
 lines += ["", f"Chosen: {best['label']}", "", "Ratio VIIRS/MODIS by year: " + ", ".join(f"{x['year']}: {x['ratio']}" for x in stab)]
-lines += ["", "Final factors k[month, pass]:"]
+lines += ["", f"Sensitivity: factors fitted on 2018-2019 only (before MODIS orbit drift) change pre-2018 VIIRS-equivalent totals by {sens_early:+.1%}."]
+lines += ["", f"Aqua starts {aqua_start}; before that month Terra-only factors are used.", "", "Final factors k[month, pass] (Terra+Aqua | Terra only):"]
 for mo in range(1, 13):
-    lines.append(f"- {mo:02d}: day {kf[(mo,'D')]:.2f}, night {kf[(mo,'N')]:.2f}")
-(ROOT / "work" / "report.md").write_text("\n".join(lines))
+    lines.append(f"- {mo:02d}: day {kf[(mo,'D')]:.2f}, night {kf[(mo,'N')]:.2f} | Terra only: day {kT[(mo,'D')]:.2f}, night {kT[(mo,'N')]:.2f}")
+(ROOT / "scripts" / "report.md").write_text("\n".join(lines))
 print("\n".join(lines))

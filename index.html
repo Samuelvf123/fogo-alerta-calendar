@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fogo Alerta · Burning Activity Calendar (MODIS + VIIRS harmonized)</title>
+<meta name="description" content="Harmonized MODIS and VIIRS active-fire hotspot calendar for the Amazonas region, 2000-2025. NASA Space Apps Challenge 2026, team Fogo Alerta (Manaus).">
+<meta name="generator" content="Code written by team Fogo Alerta with assistance from Claude (Anthropic), an AI assistant. See the Methods section.">
+<link rel="stylesheet" href="lib/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="flame" aria-hidden="true">🔥</span>
+    <div>
+      <h1>Fogo Alerta <span class="sub">Burning Activity Calendar</span></h1>
+      <p class="tag">20+ years of satellite fire hotspots for the Amazonas, with MODIS and VIIRS put on the same scale.</p>
+    </div>
+  </div>
+  <nav class="toplinks">
+    <a href="#calendar">Calendar</a>
+    <a href="#trends">Trends</a>
+    <a href="#validation">Validation</a>
+    <a href="#methods">Methods</a>
+  </nav>
+</header>
+
+<main>
+  <section class="panel select" aria-labelledby="h-area">
+    <div class="controls">
+      <h2 id="h-area">1. Choose an area</h2>
+      <label>Preset
+        <select id="preset">
+          <option value="all">Whole region (10°S–2.5°N, 74°W–56°W)</option>
+          <option value="autazes">Autazes (50 km)</option>
+          <option value="manaus">Manaus surroundings (60 km)</option>
+          <option value="labrea">Lábrea (80 km)</option>
+          <option value="apui">Apuí (80 km)</option>
+          <option value="humaita">Humaitá (70 km)</option>
+          <option value="bocadoacre">Boca do Acre (70 km)</option>
+          <option value="novoaripuana">Novo Aripuanã (70 km)</option>
+        </select>
+      </label>
+      <div class="row">
+        <label>Lat <input id="lat" type="number" step="0.01" value="-3.58"></label>
+        <label>Lon <input id="lon" type="number" step="0.01" value="-59.13"></label>
+        <label>Radius km <input id="rad" type="number" step="5" min="15" max="600" value="50"></label>
+        <button id="applyCircle" type="button">Apply</button>
+      </div>
+      <div class="row">
+        <button id="drawBtn" type="button" aria-pressed="false">✏️ Draw rectangle on map</button>
+        <span class="hint">Tip: click the map to fill Lat/Lon.</span>
+      </div>
+      <h2>2. Period</h2>
+      <div class="row">
+        <label>From <select id="y0"></select></label>
+        <label>To <select id="y1"></select></label>
+      </div>
+      <div id="areaInfo" class="areainfo" aria-live="polite"></div>
+      <div class="kpis" id="kpis" aria-live="polite"></div>
+      <button id="csvBtn" type="button" class="primary">⬇ Download CSV (monthly hotspots for this area)</button>
+    </div>
+    <div class="mapwrap">
+      <div id="map" role="application" aria-label="Map of the Amazonas region. Cells are colored by harmonized hotspot counts."></div>
+      <div class="maplegend" id="mapLegend"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="calendar" aria-labelledby="h-cal">
+    <div class="sechead">
+      <h2 id="h-cal">Burning activity calendar</h2>
+      <div class="modes" role="radiogroup" aria-label="Calendar view">
+        <label><input type="radio" name="mode" value="harm" checked> Harmonized</label>
+        <label><input type="radio" name="mode" value="anom"> vs. historical median</label>
+        <label><input type="radio" name="mode" value="naive"> Naive merge</label>
+        <label><input type="radio" name="mode" value="modis"> MODIS only</label>
+        <label><input type="radio" name="mode" value="viirs"> VIIRS only</label>
+      </div>
+    </div>
+    <p class="explain" id="calExplain"></p>
+    <div class="calwrap"><table id="cal" class="cal"></table></div>
+    <div class="legend" id="calLegend"></div>
+  </section>
+
+  <section class="panel grid2" id="trends">
+    <div>
+      <h2>Why harmonize? Yearly totals</h2>
+      <p class="explain">When VIIRS starts (2018 in this record) the raw count jumps, because VIIRS sees smaller fires. The naive merge invents a fire increase; the harmonized line removes it.</p>
+      <div class="chartbox"><canvas id="annualChart" aria-label="Yearly hotspot totals by sensor"></canvas></div>
+    </div>
+    <div>
+      <h2>Fire season profile</h2>
+      <p class="explain">Median and middle 50% of monthly hotspots (harmonized) across all years, compared with one year.</p>
+      <label class="inline">Compare year <select id="cmpYear"></select></label>
+      <div class="chartbox"><canvas id="seasonChart" aria-label="Seasonal profile"></canvas></div>
+    </div>
+  </section>
+
+  <section class="panel" id="fogo">
+    <h2>From calendar to community alert</h2>
+    <p class="explain">Fogo Alerta is our team's Telegram assistant for community leaders and fire brigades. The harmonized calendar gives it historical context, so warnings can come before the season, not only when a fire is already burning. Example generated from the data for the selected area:</p>
+    <blockquote id="alertPreview" class="alert"></blockquote>
+  </section>
+
+  <section class="panel grid2" id="validation">
+    <div>
+      <h2>Validation: hiding a year</h2>
+      <p class="explain" id="valExplain"></p>
+      <div class="chartbox"><canvas id="valChart" aria-label="Observed vs predicted VIIRS hotspots for the hold-out year"></canvas></div>
+    </div>
+    <div>
+      <h2>Model comparison</h2>
+      <div id="valTable"></div>
+      <h3>Conversion factors used</h3>
+      <div id="factorTable"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="methods">
+    <h2>Methods, data and credits</h2>
+    <div class="cols">
+      <div>
+        <h3>Data</h3>
+        <ul>
+          <li><b>NASA FIRMS</b> country yearly summaries (standard processing): MODIS Collection 6.1 active fires (Terra and Aqua, 1 km, from Nov 2000) and VIIRS 375 m active fires from NOAA-20 (from 2018). Only detections typed as presumed vegetation fire (type 0) are counted, so static sources such as gas flares are excluded.</li>
+          <li>Region: 10°S–2.5°N, 74°W–56°W (Amazonas state and surroundings), aggregated into 0.25° cells (about 28 km).</li>
+          <li>Base map © OpenStreetMap contributors. Libraries: Leaflet, Chart.js.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Harmonization</h3>
+        <ol>
+          <li>VIIRS (NOAA-20) is the reference, because it continues after MODIS ends and sees more detail.</li>
+          <li>In the overlap years (2018–2025), for each calendar month and for day and night passes, we compute a factor k = VIIRS hotspots ÷ MODIS hotspots.</li>
+          <li>Before 2018, VIIRS-equivalent hotspots = k × MODIS hotspots (day and night separately). From 2018 on, observed VIIRS counts are used. Before Aqua started (July 2002) only Terra was in orbit, so Terra-only factors are used for those months.</li>
+          <li>Validation: we hide one year, fit the factors without it, predict it from MODIS and compare with the real VIIRS counts.</li>
+        </ol>
+      </div>
+      <div>
+        <h3>Limits</h3>
+        <ul>
+          <li>Counts are hotspots (fire pixels), not number of fires or burned area.</li>
+          <li>Clouds and smoke hide fires; the rainy season has fewer valid observations.</li>
+          <li>One region-wide factor per month and pass; local differences in fire size are not modeled yet.</li>
+          <li>Terra and Aqua orbits drifted after 2020; refitting the factors with 2018–2019 only changes the pre-2018 totals by less than 1% (see Validation).</li>
+          <li>2026 standard-processing data were not yet published when this was built.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="small">NASA Space Apps Challenge 2026 · Challenge: Harmonization of MODIS and VIIRS Hot Spots · Team <b>Fogo Alerta</b> (Manaus local event): Samuel Vieira Filgueiras, Elionay Ramalho Garcia, Aline de Castro Pereira, Bruno César de Souza Falcão, Victor Icaro Barbosa Uchoa. <b>AI use:</b> code and text were written with assistance from Claude (Anthropic), an AI assistant; the team defined the idea, checked the method and the results.</p>
+  </section>
+</main>
+
+<div id="tip" class="tip" role="tooltip" hidden></div>
+<script src="lib/leaflet.js"></script>
+<script src="lib/chart.umd.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
