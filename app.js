@@ -125,7 +125,7 @@ function initMap() {
   const rend = L.canvas({padding: .3});
   for (const c of cellIds) {
     const [la, lo] = cellCenter(c), h = G.res / 2;
-    const r = L.rectangle([[la - h, lo - h], [la + h, lo + h]], {renderer: rend, weight: 0, fillOpacity: .72, interactive: false});
+    const r = L.rectangle([[la - h, lo - h], [la + h, lo + h]], {renderer: rend, weight: 0, fillOpacity: .6, interactive: false});
     r.addTo(map); cellLayers[c] = r;
   }
   L.rectangle([[G.latMin, G.lonMin], [G.latMax, G.lonMax]], {color: '#9fb0c0', weight: 1, fill: false, dashArray: '4 4', interactive: false}).addTo(map);
@@ -148,7 +148,7 @@ function colorMap() {
   for (const c of cellIds) {
     const s = tot[c];
     if (s < 0.5) { cellLayers[c].setStyle({fillOpacity: 0}); continue; }
-    cellLayers[c].setStyle({fillColor: lerpColor(INFERNO, .15 + .83 * Math.log10(s + 1) / lmax), fillOpacity: .72});
+    cellLayers[c].setStyle({fillColor: lerpColor(INFERNO, .15 + .83 * Math.log10(s + 1) / lmax), fillOpacity: .6});
   }
   $('mapLegend').innerHTML = `<div>Hotspots per 0.25° cell, ${y0}–${y1} (harmonized)</div>
     <div style="display:flex;align-items:center;gap:6px;margin-top:4px">1

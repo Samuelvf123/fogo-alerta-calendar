@@ -4,6 +4,8 @@
 
 Live app: https://samuelvf123.github.io/fogo-alerta-calendar/
 
+Demo: [7-slide PDF](demo/fogo-alerta-demo.pdf) · [30-second video](demo/fogo-alerta-demo-30s.mp4)
+
 ## What it does
 Satellites have recorded fire hotspots over the Amazon for more than 20 years, but the record is split between two sensors:
 MODIS (1 km pixels, since 2000) and VIIRS (375 m pixels, which sees many more and smaller fires).

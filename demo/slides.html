@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Fogo Alerta — NASA Space Apps 2026 demo</title>
+<style>
+@page{size:1920px 1080px;margin:0}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Segoe UI",Roboto,Arial,sans-serif;color:#e8eef4;background:#0f1720}
+.s{width:1920px;height:1080px;padding:70px 100px 100px;position:relative;page-break-after:always;overflow:hidden;background:#0f1720;display:flex;flex-direction:column;justify-content:center}
+.s:last-child{page-break-after:auto}
+.k{font-size:26px;letter-spacing:3px;text-transform:uppercase;color:#ff8a3d;font-weight:700;margin-bottom:18px}
+h1{font-size:92px;line-height:1.02;margin:0 0 24px}
+h2{font-size:64px;line-height:1.08;margin:0 0 30px}
+p,li{font-size:38px;line-height:1.38;color:#cfd9e2}
+ul{padding-left:36px;margin:0}
+li{margin-bottom:14px}
+b{color:#ffd166}
+.foot{position:absolute;left:100px;right:100px;bottom:44px;display:flex;justify-content:space-between;font-size:22px;color:#7f93a6}
+.two{display:grid;grid-template-columns:1fr 1.25fr;gap:60px;align-items:center}
+.img{width:100%;max-height:820px;object-fit:contain;border-radius:18px;border:2px solid #26384a}
+.big{font-size:150px;font-weight:800;color:#ffd166;line-height:1}
+.stat{background:#16212d;border:2px solid #26384a;border-radius:20px;padding:30px 36px}
+.stat .l{font-size:28px;color:#9fb0c0;margin-top:8px}
+.flow{display:flex;gap:26px;align-items:stretch;margin-top:30px}
+.flow div{flex:1;background:#16212d;border:2px solid #26384a;border-radius:18px;padding:30px;font-size:33px;line-height:1.35;color:#cfd9e2}
+.flow div b{display:block;font-size:32px;margin-bottom:8px}
+.alert{background:#16212d;border-left:10px solid #ff8a3d;border-radius:14px;padding:34px 40px;font-size:34px;line-height:1.4;white-space:pre-line;color:#e8eef4}
+.team{font-size:30px;color:#cfd9e2;margin-top:40px;line-height:1.5}
+</style></head><body>
+
+<section class="s">
+  <div class="k">NASA Space Apps Challenge 2026 · Manaus</div>
+  <h1>🔥 Fogo Alerta<br><span style="color:#ff8a3d">Burning Activity Calendar</span></h1>
+  <p style="font-size:42px;max-width:1400px">25 years of NASA fire hotspots for the Amazonas, with MODIS and VIIRS on one consistent scale.</p>
+  <div class="team"><b>Challenge:</b> Harmonization of MODIS and VIIRS Hot Spots<br>
+  <b>Team Fogo Alerta:</b> Samuel Vieira Filgueiras · Elionay Ramalho Garcia · Aline de Castro Pereira · Bruno César de Souza Falcão · Victor Icaro Barbosa Uchoa</div>
+  <div class="foot"><span>samuelvf123.github.io/fogo-alerta-calendar</span><span>1 / 7</span></div>
+</section>
+
+<section class="s">
+  <div class="k">The problem</div>
+  <div class="two">
+    <div>
+      <h2>Two satellites,<br>two different counts</h2>
+      <ul>
+        <li>MODIS (1 km) has tracked fires since 2000 and is ending.</li>
+        <li>VIIRS (375 m) sees smaller fires: about <b>4× more hotspots</b> in the same place and month.</li>
+        <li>Stitching them creates a <b>fake fire surge</b> when VIIRS begins, hiding real trends from fire managers.</li>
+      </ul>
+    </div>
+    <img class="img" src="../docs_img/s_annual.png">
+  </div>
+  <div class="foot"><span>Amazonas region · NASA FIRMS</span><span>2 / 7</span></div>
+</section>
+
+<section class="s">
+  <div class="k">Our solution</div>
+  <div class="two" style="grid-template-columns:1.6fr 1fr">
+    <img class="img" src="../docs_img/s_cal.png">
+    <div>
+      <h2>A calendar anyone can read</h2>
+      <ul>
+        <li>Pick an area on the map (Autazes, Lábrea, Apuí… or draw it).</li>
+        <li>See every month since 2000 in <b>VIIRS-equivalent hotspots</b>.</li>
+        <li>Spot unusual months vs. the historical median.</li>
+        <li>Download the data as CSV.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span>samuelvf123.github.io/fogo-alerta-calendar</span><span>3 / 7</span></div>
+</section>
+
+<section class="s">
+  <div class="k">How it works</div>
+  <h2>Measure the relationship, then convert the past</h2>
+  <div class="flow">
+    <div><b>1 · Data</b>NASA FIRMS MODIS C6.1 (Terra + Aqua, 2000–2025) and VIIRS 375 m NOAA-20 (2018–2025). Vegetation fires only.</div>
+    <div><b>2 · Aggregate</b>2.9 million detections into 0.25° cells × month × day/night.</div>
+    <div><b>3 · Factor</b>For each month and pass: k = VIIRS ÷ MODIS in the overlap years. k ranges 2.3–9.4.</div>
+    <div><b>4 · Convert</b>Before 2018: VIIRS-equivalent = k × MODIS. From 2018: real VIIRS.</div>
+  </div>
+  <p style="margin-top:40px">Night factors are larger: VIIRS detects many weak night fires that MODIS misses.</p>
+  <div class="foot"><span>Python · JavaScript · Leaflet · Chart.js · GitHub Pages</span><span>4 / 7</span></div>
+</section>
+
+<section class="s">
+  <div class="k">Evidence</div>
+  <div class="two">
+    <div>
+      <h2>We hid 2023 and predicted it</h2>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+        <div class="stat"><div class="big" style="font-size:96px">−0.2%</div><div class="l">yearly error, harmonized</div></div>
+        <div class="stat"><div class="big" style="font-size:96px;color:#ff5d73">−74%</div><div class="l">error without harmonization</div></div>
+        <div class="stat"><div class="big" style="font-size:96px">0.999</div><div class="l">monthly correlation (r)</div></div>
+        <div class="stat"><div class="big" style="font-size:96px">0.98</div><div class="l">r for each 28 km cell, yearly</div></div>
+      </div>
+    </div>
+    <img class="img" src="../docs_img/s_val.png">
+  </div>
+  <div class="foot"><span>Factors fitted without 2023; real VIIRS vs. MODIS converted</span><span>5 / 7</span></div>
+</section>
+
+<section class="s">
+  <div class="k">Impact</div>
+  <div class="two">
+    <div>
+      <h2>From history to a warning before the season</h2>
+      <ul>
+        <li>Civil Defense and brigades see the <b>critical period</b> of their own area.</li>
+        <li>Researchers get one consistent series from 2000 to today.</li>
+        <li>Our Telegram assistant <b>Fogo Alerta</b> can warn riverside and rural communities months ahead.</li>
+      </ul>
+    </div>
+    <div class="alert">🔥 Fogo Alerta · Autazes
+In this area, most fires happen in Sep–Oct (66% of a typical year). Oct is usually the worst month (median 493 hotspots).
+In Oct 2025 there were 239 hotspots, −52% compared with a typical Oct.
+The critical period starts in about 10 months: plan firebreaks and talk with the community brigade now. In an emergency call Bombeiros 193.</div>
+  </div>
+  <div class="foot"><span>Example generated by the app for Autazes (50 km radius)</span><span>6 / 7</span></div>
+</section>
+
+<section class="s">
+  <div class="k">Next steps</div>
+  <h2>What comes next</h2>
+  <ul>
+    <li>Factors that vary by place and fire size (using fire radiative power).</li>
+    <li>NOAA-21 and near-real-time updates for the current year.</li>
+    <li>Automatic seasonal alerts in the Fogo Alerta Telegram assistant.</li>
+  </ul>
+  <p style="margin-top:40px;font-size:28px;color:#9fb0c0">Data: NASA FIRMS (MODIS C6.1, VIIRS 375 m NOAA-20). Map © OpenStreetMap contributors. AI use: code and text written with assistance from Claude (Anthropic); idea, method review and checks by the team.</p>
+  <p style="font-size:40px;margin-top:30px"><b>Try it:</b> samuelvf123.github.io/fogo-alerta-calendar<br><b>Code:</b> github.com/Samuelvf123/fogo-alerta-calendar</p>
+  <div class="foot"><span>Team Fogo Alerta · Manaus</span><span>7 / 7</span></div>
+</section>
+</body></html>
